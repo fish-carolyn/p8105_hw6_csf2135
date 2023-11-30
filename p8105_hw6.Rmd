@@ -61,12 +61,60 @@ filter(
 )
 ```
 
-* For the city of Baltimore, MD, use the glm function to fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors. 
-* Save the output of glm as an R object; 
-* apply the broom::tidy to this object; 
-* and obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing male victims to female victims keeping all other variables fixed.
-```{r}
+* For the city of Baltimore, MD, use the glm function to fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors. [x]
+* Save the output of glm as an R object; [x]
+* apply the broom::tidy to this object; [x]
+* and obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing male victims to female victims keeping all other variables fixed. [x]
+```{r, message = FALSE, warning= FALSE}
+# Recode outcome = unsolved (0), and outcome = solved (1)
+# Recode race = white as reference (0), and race = black (1)
+# Recode sex = male as reference (0), and sex = female (1)
 
+baltimore_df = homicide_df |> 
+  filter(city_state == "Baltimore, MD") |> 
+  filter(
+    !is.na(victim_sex) & !is.na(victim_age) & !is.na(victim_race) & !is.na(resolution)
+  ) |> 
+  mutate(
+    outcome = case_match(
+      resolution, 
+     "solved" ~ 1, 
+     "unsolved" ~ 0 
+    ), 
+    race = case_match(
+      victim_race, 
+      "Black" ~ 1, 
+      "White" ~ 0
+    ), 
+    sex = case_match(
+      victim_sex, 
+      "Female" ~ 1, 
+      "Male" ~ 0
+    )) |> 
+  select(
+    city_state, outcome, race, sex, victim_age
+  )
+
+# fit logistic regression for resolution 
+fit = glm(outcome ~ victim_age + sex + race, data = baltimore_df, family = "binomial")
+
+#create table of terms with confidence intervals
+tidy_summary = broom::tidy(fit)
+
+conf_intervals = confint(fit)
+
+result_baltimore = cbind(tidy_summary, conf_intervals) 
+
+result_baltimore |> 
+  mutate(
+    adj_OR = exp(estimate), 
+    `lower 95% CI` = exp(`2.5 %`), 
+    `upper 95% CI` = exp(`97.5 %`),
+  ) |> 
+  select(
+    adj_OR, `lower 95% CI`, `upper 95% CI`
+  ) |> 
+  kableExtra::kable(digits = 2 )
 ```
 
 * Now run glm for each of the cities in your dataset, and 
