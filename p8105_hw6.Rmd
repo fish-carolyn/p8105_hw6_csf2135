@@ -70,8 +70,7 @@ filter(
 # Recode race = white as reference (0), and race = black (1)
 # Recode sex = female as reference (0), and sex = male (1)
 
-baltimore_df = homicide_df |> 
-  filter(city_state == "Baltimore, MD") |> 
+homicide_df = homicide_df |> 
   filter(
     !is.na(victim_sex) & !is.na(victim_age) & !is.na(victim_race) & !is.na(resolution)
   ) |> 
@@ -97,8 +96,9 @@ baltimore_df = homicide_df |>
 ```
 
 ```{r, message = FALSE, warning=FALSE}
-# fit logistic regression for resolution 
-fit = glm(outcome ~ victim_age + sex + race, data = baltimore_df, family = "binomial")
+# fit logistic regression for resolution in Baltimore, MD
+fit = glm(outcome ~ victim_age + sex + race, data = baltimore_df |> filter(city_state == "Baltimore, MD") , 
+          family = "binomial")
 
 #create table of terms with confidence intervals
 tidy_summary = broom::tidy(fit)
@@ -119,7 +119,7 @@ result_baltimore |>
   kableExtra::kable(digits = 2 )
 ```
 
-**Interpretation:** The odds of a homicide case in Baltimore, M being solved when victims were male is 0.43 times that of cases where victims were female, adjusting for the victim's age and race. At the 95% level of significance, a range of reasonable estimates for the odds ratio are between 0.32 and 0.56. The null hypothesis of an adjusted OR of 1 can be rejected. 
+**Interpretation:** The odds of a homicide case in Baltimore, MD being solved when victims were male is 0.43 times that of cases where victims were female, adjusting for the victim's age and race. At the 95% level of significance, a range of reasonable estimates for the odds ratio are between 0.32 and 0.56. The null hypothesis of an adjusted OR of 1 can be rejected. 
 
 * Now run glm for each of the cities in your dataset, and 
 * extract the adjusted odds ratio (and CI) for solving homicides comparing male victims to female victims. 
@@ -128,6 +128,29 @@ result_baltimore |>
   * list columns, and 
   * unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
 ```{r}
+results_all = 
+  homicide_df %>%
+  nest(data = c(outcome, victim_age, sex, race)) %>%
+  mutate(
+    models = map(data, 
+                 ~ glm(outcome ~ victim_age + sex + race, 
+                        data = ., family = "binomial")),
+    tidy_summary = map(models, broom::tidy)
+  ) %>%
+  unnest(tidy_summary) %>% view()
+  select(city_state, term, estimate) %>% 
+  mutate(city_state = fct_reorder(city_state, estimate))
+  
+conf_int_all = homicide_df %>%
+  nest(data = c(outcome, victim_age, sex, race)) %>%
+  mutate(
+    models = map(data, 
+                 ~ glm(outcome ~ victim_age + sex + race, 
+                        data = ., family = "binomial")),
+    conf = map(models, confint)
+  ) %>% 
+  unnest(conf) %>% view()
+  select(city_state, term, estimate) %>% 
 
 ```
 
