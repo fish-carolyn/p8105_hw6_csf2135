@@ -168,7 +168,7 @@ plot_unsolved_sex <- results_all  |>
     geom_point(size = 2) +
     scale_color_viridis_c(option = "turbo") +
     geom_errorbar(aes(ymin = `lower 95% CI`, ymax = `upper 95% CI`), size = 1, width = 0.2, alpha = 0.5) +
-    labs(title = "Adjusted OR solved homicides by sex, by city", x = "City", y = "OR for Solved Homicides") +
+    labs(title = "Adjusted OR solved homicides by sex, by city", x = "City", y = "OR for Solved Homicides for male victims compared to females") +
     coord_flip() + 
     theme(
       panel.background = element_rect(fill = "grey95"), 
@@ -202,16 +202,33 @@ weather_df =
   select(name, id, everything())
 ```
 
-The boostrap is helpful when you’d like to perform inference for a parameter / value / summary that doesn’t have an easy-to-write-down distribution in the usual repeated sampling framework. We’ll focus on a simple linear regression with tmax as the response with tmin and prcp as the predictors, and are interested in the distribution of two quantities estimated from these data:
+The boostrap is helpful when you’d like to perform inference for a parameter / value / summary that doesn’t have an easy-to-write-down distribution in the usual repeated sampling framework. 
+
+We’ll focus on a simple linear regression with `tmax` as the response with `tmin` and `prcp` as the predictors, and are interested in the distribution of two quantities estimated from these data:
   * r̂2
   * log(β̂1∗β̂2)
 
 * Use 5000 bootstrap samples and, 
 * for each bootstrap sample, produce estimates of these two quantities. 
-* Plot the distribution of your estimates, and describe these in words. 
 ```{r}
+set.seed(123)
 
+weather_df |> 
+   filter(!is.na(tmax) & !is.na(tmin) & !is.na(prcp)) |> 
+  select(tmax, tmin, prcp
+  ) |> 
+  modelr::bootstrap(n = 5000) |>
+  mutate(
+    models = map(strap, \(df) lm(tmax ~ tmin + prcp, data = df)),
+    rsquared = map(models, ~ summary(.x)$r.squared), 
+    beta_product = map(models, ~ log(abs((coef(.x)["tmin"] * coef(.x)["prcp"]))))
+  ) |> 
+    unnest(c(rsquared, beta_product)) |>
+  select(.id, rsquared, beta_product) |> 
+  print()
 ```
+
+* Plot the distribution of your estimates, and describe these in words. 
 
 * Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for r̂2
  and log(β̂0∗β̂1).  
