@@ -97,7 +97,7 @@ homicide_df = homicide_df |>
 
 ```{r, message = FALSE, warning=FALSE}
 # fit logistic regression for resolution in Baltimore, MD
-fit = glm(outcome ~ victim_age + sex + race, data = baltimore_df |> filter(city_state == "Baltimore, MD") , 
+fit = glm(outcome ~ victim_age + sex + race, data = homicide_df |> filter(city_state == "Baltimore, MD") , 
           family = "binomial")
 
 #create table of terms with confidence intervals
@@ -128,35 +128,48 @@ result_baltimore |>
   * list columns, and 
   * unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
 ```{r}
-results_all = 
-  homicide_df %>%
-  nest(data = c(outcome, victim_age, sex, race)) %>%
-  mutate(
-    models = map(data, 
-                 ~ glm(outcome ~ victim_age + sex + race, 
-                        data = ., family = "binomial")),
-    tidy_summary = map(models, broom::tidy)
-  ) %>%
-  unnest(tidy_summary) %>% view()
-  select(city_state, term, estimate) %>% 
-  mutate(city_state = fct_reorder(city_state, estimate))
+# create a new function to calculate adjusted OR and 95% CI
+fit_and_extract <- function(df) {
+  fit = glm(outcome ~ victim_age + sex + race, data = df, family = "binomial")
   
-conf_int_all = homicide_df %>%
-  nest(data = c(outcome, victim_age, sex, race)) %>%
+  tidy_summary = broom::tidy(fit)
+  
+  conf_intervals = confint(fit)
+  
+  result = cbind(tidy_summary, conf_intervals)
+  
+  result  |> 
+    filter(term == "sex") |> 
+    mutate(
+      adj_OR = exp(estimate),
+      `lower 95% CI` = exp(`2.5 %`),
+      `upper 95% CI` = exp(`97.5 %`)
+    )  |> 
+    select(adj_OR, `lower 95% CI`, `upper 95% CI`)
+}
+```
+  
+```{r}
+results_all = homicide_df |> 
+  group_by(city_state) |> 
+  nest(data = c(outcome, victim_age, sex, race)) |> 
   mutate(
-    models = map(data, 
-                 ~ glm(outcome ~ victim_age + sex + race, 
-                        data = ., family = "binomial")),
-    conf = map(models, confint)
-  ) %>% 
-  unnest(conf) %>% view()
-  select(city_state, term, estimate) %>% 
-
+    results = purrr::map(data, fit_and_extract)
+  ) |> 
+  unnest(results) |> 
+  arrange(adj_OR)
 ```
 
 * Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
 ```{r}
-
+ggplot(results_all, aes(x = adj_OR, y = city_state, xmin = `lower 95% CI`, xmax = `upper 95% CI`)) +
+  geom_point(aes(color = factor(adj_OR > 1)), size = 3) +
+  geom_errorbarh(height = 0.2, size = 1, color = "black") +
+  labs(title = "Estimated Odds Ratios and 95% Confidence Intervals",
+       x = "Adjusted Odds Ratio (log scale)",
+       y = "City, State") +
+  scale_x_log10() +
+  theme_minimal()
 ```
 
 #### Problem 2
