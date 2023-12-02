@@ -298,14 +298,80 @@ kableExtra::kable(digits = 2)
 In this problem, you will analyze data gathered to understand the effects of several variables on a child’s birthweight. This dataset, available here, consists of roughly 4000 children and includes the following variables:
 
 * Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.).
-```{r}
+```{r, echo=FALSE}
+df_birthweight <- read_csv("birthweight.csv")
 
+skimr::skim(df_birthweight)
 ```
+The `birthweight.csv` dataset contains `r nrow(df_birthweight)` observations and `r ncol(df_birthweight)` variables describing various potential predictors for birthweight (`bwt`), including mother's weight gain during pregnancy (`wtgain`), maternal smoking exposure (`smoken`), mother's age at birth (`momage`), gestational age in weeks (`gaweeks`), maternal (`mrace`) and paternal (`frace`) race, and family income (`fincome`). 
+
+
+The dataset has no missing data and all variables in the original data are numeric. 
+
+
+**I propose a regression model to see how much variability in birthweight can be attributed to the mother's weight gain during the pregnancy, adjusting for mom's smoking exposure, age at birth, gestational age, race, dad's race, and family income. I hypothesize that less maternal weight gain, or maternal weight loss, during pregnancy will be associated with lower birthweight.**
 
 * Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. 
 * Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
-```{r}
 
+The first step in my model building process is to establish reference variables and check the distributions of variables. 
+```{r}
+#cleaning analytic dataset 
+
+df_birthweight_analytic <- df_birthweight |> 
+  select(
+    bwt, wtgain, smoken, momage, gaweeks, mrace, frace, fincome
+  ) |> 
+  mutate(
+    frace = as.factor(frace),
+    mrace = as.factor(mrace)
+  )
+
+#checking distributions for continuous variables
+
+df_birthweight |> 
+  select(
+    bwt, wtgain, smoken, momage, gaweeks, fincome
+  ) |> 
+  gather(variable, value) |> 
+ggplot(aes(x = value, fill = variable)) +
+  geom_histogram(binwidth = 5, position = "identity", alpha = 0.7) +
+  facet_grid(~variable, scales = "free") +
+  theme_minimal() +
+  theme(legend.position = "None")
+
+# checking racial distribution 
+
+df_birthweight |> 
+  select(mrace, frace) |> 
+  count(mrace, frace) |> 
+  mutate(
+    mrace_category = case_match(
+      as.numeric(mrace),
+      1 ~ "White",
+      2 ~ "Black",
+      3 ~ "Asian",
+      4 ~ "Puerto Rican",
+      8 ~ "Other",
+      9 ~ "Unknown"
+    ),
+    frace_category = case_match(
+      as.numeric(frace),
+      1 ~ "White",
+      2 ~ "Black",
+      3 ~ "Asian",
+      4 ~ "Puerto Rican",
+      8 ~ "Other",
+      9 ~ "Unknown"
+    )
+  ) |> 
+  select(-mrace, -frace) |> 
+  pivot_wider(names_from = frace_category, values_from = n) |>
+  kableExtra::kable()
+```
+
+```{r, include=FALSE}
+ 
 ```
 
 * Compare your model to two others:
