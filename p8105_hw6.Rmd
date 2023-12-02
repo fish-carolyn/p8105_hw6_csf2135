@@ -249,6 +249,28 @@ ggsave(plot_save_path, plot_sim_estimates_r2, device = "png", width = 6, height 
 ```
 The estimated R-squared values for the simulated weather data are approximately normal. The median of the data is at `r sim_estimates |> pull(rsquared) |> median()|> round(digits = 2)`. 
 
+``````{r, warning=FALSE, message=FALSE}
+plot_sim_estimates_log = sim_estimates  |> 
+  ggplot(aes(x = beta_product)) +
+    geom_histogram(fill = "purple3", color = "pink" ,alpha = 0.5) +
+  labs(title = "log(β̂1xβ̂2) values for simulated weather estimates", x = "Count", y = "log(β̂1xβ̂2)") +
+    theme(
+      panel.background = element_rect(fill = "grey95"), 
+      axis.title = element_text(color = "black", size = 14), 
+      axis.text = element_text(color = "black", size = 11), 
+      title = element_text(color = "black", size = 18)
+    ) +
+  theme_bw()
+
+plot_sim_estimates_log
+
+plot_save_path <- "hw6_plots/plot_sim_estimates_log2.png"
+
+ggsave(plot_save_path, plot_sim_estimates_log, device = "png", width = 6, height = 6, units = "in", dpi = 300)
+```
+The estimated R-squared values for the simulated weather data have a left skew. The median of the data is at `r sim_estimates |> pull(beta_product) |> median()|> round(digits = 2)`. 
+
+
 * Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for r̂2 and log(β̂0∗β̂1).  
   * Note: broom::glance() is helpful for extracting r̂2 from a fitted regression, and
   * broom::tidy() (with some additional wrangling) should help in computing log(β̂1∗β̂2).
