@@ -283,13 +283,14 @@ The estimated R-squared values for the simulated weather data have a left skew. 
   * Note: broom::glance() is helpful for extracting r̂2 from a fitted regression, and
   * broom::tidy() (with some additional wrangling) should help in computing log(β̂1∗β̂2).
 ```{r}
-rsquared_logbeta_ci = sim_estimates |> 
-  mutate(
+sim_estimates |> 
+  summarise(
     rsquared_lower = quantile(rsquared, 0.025, na.rm = TRUE),
     rsquared_upper = quantile(rsquared, 0.975, na.rm = TRUE), 
     logbeta_lower = quantile(logbeta, 0.0275, na.rm = TRUE), 
     logbeta_upper = quantile(logbeta, 0.975, na.rm = TRUE)
-  )
+  ) |> 
+kableExtra::kable(digits = 2)
 ```
 
 #### Problem 3
