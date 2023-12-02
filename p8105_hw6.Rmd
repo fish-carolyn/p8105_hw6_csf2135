@@ -311,8 +311,12 @@ The dataset has no missing data and all variables in the original data are numer
 
 **I propose a regression model to see how much variability in birthweight can be attributed to the mother's weight gain during the pregnancy, adjusting for mom's smoking exposure, age at birth, gestational age, race, dad's race, and family income. I hypothesize that less maternal weight gain, or maternal weight loss, during pregnancy will be associated with lower birthweight.**
 
-* Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. 
-* Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+* Propose a regression model for birthweight. [x]
+
+* This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. [x]
+
+* Describe your modeling process and []
+* show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.[]
 
 The first step in my model building process is to establish reference variables and check the distributions of variables. 
 ```{r}
@@ -343,7 +347,7 @@ ggplot(aes(x = value, fill = variable)) +
 df_birthweight_analytic |> 
   select(mrace, frace) |> 
   mutate(
-    mrace_category = case_match(
+    `Mom's Race` = case_match(
       as.numeric(mrace),
       1 ~ "White",
       2 ~ "Black",
@@ -352,7 +356,7 @@ df_birthweight_analytic |>
       8 ~ "Other",
       9 ~ "Unknown"
     ),
-    frace_category = case_match(
+    `Dad's Race` = case_match(
       as.numeric(frace),
       1 ~ "White",
       2 ~ "Black",
@@ -362,8 +366,8 @@ df_birthweight_analytic |>
       9 ~ "Unknown"
     )
   ) |> 
-  count(mrace_category, frace_category) |> 
-  pivot_wider(names_from = frace_category, values_from = n) |>
+  count(`Dad's Race`, `Mom's Race`) |> 
+  pivot_wider(names_from = `Dad's Race`, values_from = n) |>
   kableExtra::kable()
 ```
 
@@ -373,7 +377,7 @@ Looking at the distributions of race for moms and dads, some of the cell sizes g
  df_birthweight_analytic |> 
   select(mrace, frace) |> 
   mutate(
-    mrace_category = case_match(
+    `Mom's Race` = case_match(
       as.numeric(mrace),
       1 ~ "White",
       2 ~ "Black",
@@ -382,7 +386,7 @@ Looking at the distributions of race for moms and dads, some of the cell sizes g
       8 ~ "Other",
       9 ~ "Unknown"
     ),
-    frace_category = case_match(
+    `Dad's Race` = case_match(
       as.numeric(frace),
       1 ~ "White",
       2 ~ "Black",
@@ -392,29 +396,58 @@ Looking at the distributions of race for moms and dads, some of the cell sizes g
       9 ~ "Unknown"
     )
   ) |>  
-  count(mrace_category, frace_category) |> 
-  pivot_wider(names_from = frace_category, values_from = n) |> 
+  count(`Dad's Race`, `Mom's Race`) |> 
+  pivot_wider(names_from = `Dad's Race`, values_from = n) |> 
   kableExtra::kable()
 ```
 
 Yep, combining the racial groups will smaller sample sizes helps. Now I'll adjust for this re-categorization in the analytic data set. 
 
 I also make unordered categorical variables (`mrace` and `frace`) into factors. 
-
 ```{r}
 df_birthweight_analytic = df_birthweight_analytic |> 
   mutate(
-    mrace = case_when(
-      mrace %in% (3:4) ~  8, 
-      TRUE ~ mrace), 
-    frace = case_when(
-       frace %in% c(3:4) ~  8, 
-       TRUE ~ frace)
-    ) |> 
+    mrace = case_match(
+      as.numeric(mrace),
+      1 ~ "White",
+      2 ~ "Black",
+      3 ~ "Other",
+      4 ~ "Other",
+      8 ~ "Other",
+      9 ~ "Unknown"
+    ),
+    frace = case_match(
+      as.numeric(frace),
+      1 ~ "White",
+      2 ~ "Black",
+      3 ~ "Other",
+      4 ~ "Other",
+      8 ~ "Other",
+      9 ~ "Unknown"
+    )
+  ) |>  
   mutate(
-    frace = as.factor(frace),
-    mrace = as.factor(mrace)
+    frace = fct_infreq(frace),
+    mrace = fct_infreq(mrace)
   )
+```
+
+Fit full model and tidy the output 
+```{r}
+fit = lm(bwt ~ wtgain + smoken + momage + gaweeks + mrace + frace + fincome, data = df_birthweight_analytic)
+
+fit |> 
+  broom::glance() |> 
+  kableExtra::kable(digits = 3)
+
+fit |> 
+  broom::tidy() |> 
+  mutate(term = 
+           str_replace(term, "^frace", "Dad's race: "), 
+         term = 
+           str_replace(term, "^mrace", "Mom's race: ")
+         ) |> print()
+    kableExtra::kable(digits = 3)
 ```
 
 
@@ -426,35 +459,7 @@ df_birthweight_analytic = df_birthweight_analytic |>
 * use crossv_mc and functions in purrr as appropriate.
 
 ```{r}
-Propose and fit your regression model
-# Example: model with babysex, bhead, blength, delwt, fincome, frace, gaweeks, malform, menarche, ...
-model <- lm(bwt ~ babysex + bhead + blength + delwt + fincome + frace + gaweeks + malform + menarche, data = data)
 
-# Plot of model residuals against fitted values
-plot_model <- ggplot(data, aes(x = .fitted, y = .resid)) +
-  geom_point() +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Residuals vs. Fitted Values", x = "Fitted Values", y = "Residuals")
-
-# Fit alternative models
-# Model 1: length at birth and gestational age as predictors
-model_length_gestational <- lm(bwt ~ blength + gaweeks, data = data)
-
-# Model 2: head circumference, length, sex, and interactions
-model_interactions <- lm(bwt ~ bhead * blength * babysex, data = data)
-
-# Compare models using cross-validated prediction error
-cross_val_error_model <- function(model) {
-  cv <- crossv_mc(data, model, 
-                  summary_fun = function(data, ...) sqrt(mean((data$.pred - data$obs)^2)))
-  return(mean(cv$estimate))
-}
-
-models <- list(model, model_length_gestational, model_interactions)
-cv_errors <- map_dbl(models, cross_val_error_model)
-
-# Print cross-validated prediction errors
-print(cv_errors)
 ```
 
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
