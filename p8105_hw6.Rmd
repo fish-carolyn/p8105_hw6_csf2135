@@ -278,20 +278,16 @@ sim_weather_cis = sim_estimates |>
 
 
 kableExtra::kable(sim_weather_cis, digits = 2)
-
-sim_weather_cis |> select(rsquared_lower)
 ```
 
-The 95% CI for R-square values for the relationship between tmax and tmin + prcp is: (`r sim_weather_cis |> select(rsquared_lower)` - `r sim_weather_cis |> select(rsquared_upper)`). 
+The 95% CI for R-square values for the relationship between tmax and tmin + prcp is: (`r round(sim_weather_cis$rsquared_lower, digit=2)` - `r round(sim_weather_cis$rsquared_upper, digit=2)`). 
 
-The 95% CI for the  log(β̂1∗β2) is: (`r sim_weather_cis |> select(logbeta_lower)` - `r sim_weather_cis |> select(logbeta_upper)`). 
+The 95% CI for the  log(β̂1∗β2) is: (`r round(sim_weather_cis$logbeta_lower, digit=2)` - `r round(sim_weather_cis$logbeta_upper, digit=2)`). 
 
 #### Problem 3
 
-In this problem, you will analyze data gathered to understand the effects of several variables on a child’s birthweight. This dataset, available here, consists of roughly 4000 children and includes the following variables:
-
 * Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.).
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE}
 df_birthweight <- read_csv("birthweight.csv")
 
 skimr::skim(df_birthweight)
@@ -304,13 +300,8 @@ The dataset has no missing data and all variables in the original data are numer
 
 **I propose a regression model to see how much variability in birthweight can be attributed to the mother's weight gain during the pregnancy, adjusting for mom's smoking exposure, age at birth, gestational age, race, dad's race, and family income. I hypothesize that less maternal weight gain, or maternal weight loss, during pregnancy will be associated with lower birthweight.**
 
-* Propose a regression model for birthweight. [x]
 
-* This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. [x]
-
-* Describe your modeling process and []
-
-The first step in my model building process is to establish reference variables and check the distributions of variables. 
+The first step in my model building process is to establish reference variables and check the distributions of variables. Upon looking at the distributions of race for moms and dads, some of the cell sizes get pretty small for the Asian, Puerto Rican, and Other racial categories. I decided to combine these for the sake of building the model because I am unaware of any literature-based reason not to (not saying it's the best choice). Then I adjusted for this re-categorization in the analytic data set. I also made unordered categorical variables (`mrace`) into factors. 
 
 ```{r}
 #checking distributions for continuous variables
@@ -346,8 +337,6 @@ df_birthweight |>
   kableExtra::kable()
 ```
 
-Looking at the distributions of race for moms and dads, some of the cell sizes get pretty small for the Asian, Puerto Rican, and Other racial categories. I will combine these for the sake of building this model because I am unaware of any literature-based reason not to. 
-
 ```{r}
  df_birthweight |> 
   select(mrace) |> 
@@ -367,9 +356,6 @@ Looking at the distributions of race for moms and dads, some of the cell sizes g
   kableExtra::kable()
 ```
 
-Yep, combining the racial groups will smaller sample sizes helps. Now I'll adjust for this re-categorization in the analytic data set. 
-
-I also make unordered categorical variables (`mrace`) into factors. 
 ```{r}
 df_birthweight_analytic = df_birthweight |> 
   mutate(
@@ -388,6 +374,7 @@ df_birthweight_analytic = df_birthweight |>
   )
 ```
 
+
 Fit full model and tidy the output 
 ```{r}
 fit = lm(bwt ~ wtgain + smoken + momage + gaweeks + mrace + fincome, data = df_birthweight_analytic)
@@ -404,7 +391,7 @@ fit |>
     kableExtra::kable(digits = 3)
 ```
 
-* show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.[x]
+*show a plot of model residuals against fitted values
 ```{r}
 df_birthweight_analytic |> 
     modelr::add_residuals(fit) |> 
@@ -441,10 +428,6 @@ nest_lm_res |>
 * Compare your model to two others:
   * One using length at birth and gestational age as predictors (main effects only)
   * One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
-
-* Make this comparison in terms of the cross-validated prediction error; [x]
-
-* use crossv_mc and functions in purrr as appropriate.[x]
 
 Create training and testing data
 ```{r}
@@ -493,7 +476,7 @@ cv_df |>
     theme(legend.position = "bottom")
 ```
 
-Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
+Comparing RMSE values for each of the models demonstrates that the model containing the predictors head circumference, length, sex, and all interactions of these three variables had the best fit relative to my model and the other model provided for comparison. If I were to try to refine my model I would definitely look into testing for potential interactions and the incorportation of the variables used in the "interactions" model. 
 
 
 
