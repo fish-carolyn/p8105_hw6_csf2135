@@ -33,14 +33,7 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 #### Problem 1
 
-The Washington Post has gathered data on homicides in 50 large U.S. cities and made the data available through a GitHub repository here. You can read their accompanying article here.
-
-* Create a city_state variable (e.g. “Baltimore, MD”) [x]
-* a binary variable indicating whether the homicide is solved. [x]
-* Omit cities Dallas, TX; Phoenix, AZ; and Kansas City, MO – these don’t report victim race. [x] 
-* Also omit Tulsa, AL – this is a data entry mistake. [x]
-* For this problem, limit your analysis those for whom victim_race is white or black. [x]
-* Be sure that victim_age is numeric. [x]
+Cleaning the homicide data set.
 ```{r, message=FALSE}
 homicide_df = 
   read_csv("homicide-data.csv", 
@@ -62,10 +55,13 @@ filter(
 )
 ```
 
-* For the city of Baltimore, MD, use the glm function to fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors. [x]
-* Save the output of glm as an R object; [x]
-* apply the broom::tidy to this object; [x]
-* and obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing male victims to female victims keeping all other variables fixed. [x]
+**Describe the raw data.**
+
+The raw data includes variables for the victim's first and last name, demographic information (sex, race, age). Each homicide has a unique identifier (`uid`) and the date the incident was reported,  the incident location (city, state, latitude, longitude), and case status (`disposition`) are provided. 
+
+There are `r nrow(homicide_df)` observations in the data and `r ncol(homicide_df)` variables in the raw data set. Most data is non-missing, except for `r homicide_df |> filter(is.na(lat)) |> count()` instances where latitude/longitude data is missing. There are `r homicide_df |> select(uid) |> unique() |> count()` unique incidents described in the data occurring in `r homicide_df |> select(city_state) |> unique() |> count()` unique cities across the US. 
+
+
 ```{r, message = FALSE, warning= FALSE}
 # Recode outcome = unsolved (0), and outcome = solved (1)
 # Recode race = white as reference (0), and race = black (1)
@@ -463,7 +459,7 @@ cv_df =
   cv_df |> 
   mutate(
     train = map(train, as_tibble),
-    test = map(test, as_tibble))
+    test = map(test, as_tibble)) 
 
 cv_df = 
   cv_df |> 
